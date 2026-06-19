@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Material {
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    String
+  unit        String
+  createdAt   DateTime @default(now())
+  stock       Stock?
+  requests    PurchaseRequestItem[]
+  entries     StockEntryItem[]
+}
+
+model Stock {
+  id          Int      @id @default(autoincrement())
+  materialId  Int      @unique
+  quantity    Float    @default(0)
+  updatedAt   DateTime @updatedAt
+  material    Material @relation(fields: [materialId], references: [id])
+}
+
+model PurchaseRequest {
+  id          Int      @id @default(autoincrement())
+  title       String
+  applicant   String
+  status      String   @default("pending")
+  remark      String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  items       PurchaseRequestItem[]
+}
+
+model PurchaseRequestItem {
+  id          Int             @id @default(autoincrement())
+  requestId   Int
+  materialId  Int
+  quantity    Float
+  remark      String          @default("")
+  request     PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  material    Material        @relation(fields: [materialId], references: [id])
+}
+
+model StockEntry {
+  id          Int      @id @default(autoincrement())
+  operator    String
+  remark      String   @default("")
+  createdAt   DateTime @default(now())
+  items       StockEntryItem[]
+}
+
+model StockEntryItem {
+  id          Int         @id @default(autoincrement())
+  entryId     Int
+  materialId  Int
+  quantity    Float
+  remark      String      @default("")
+  entry       StockEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  material    Material    @relation(fields: [materialId], references: [id])
+}
