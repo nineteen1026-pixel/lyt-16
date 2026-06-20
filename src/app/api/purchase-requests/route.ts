@@ -3,7 +3,16 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   const requests = await prisma.purchaseRequest.findMany({
-    include: { items: { include: { material: true } } },
+    include: {
+      items: { include: { material: true } },
+      assembly: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(requests);

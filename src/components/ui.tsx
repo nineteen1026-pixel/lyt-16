@@ -111,13 +111,14 @@ export function Button({
   variant = "primary",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "danger" | "secondary";
+  variant?: "primary" | "danger" | "secondary" | "success";
 }) {
   const base = "px-4 py-1.5 rounded text-sm font-medium transition";
   const variants = {
     primary: "bg-amber-700 text-white hover:bg-amber-800",
     danger: "bg-red-600 text-white hover:bg-red-700",
     secondary: "bg-gray-200 text-gray-700 hover:bg-gray-300",
+    success: "bg-green-600 text-white hover:bg-green-700",
   };
   return (
     <button {...props} className={`${base} ${variants[variant]} ${props.className || ""}`}>

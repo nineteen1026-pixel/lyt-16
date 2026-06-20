@@ -9,14 +9,16 @@ datasource db {
 }
 
 model Material {
-  id        Int                   @id @default(autoincrement())
-  name      String
-  category  String
-  unit      String
-  createdAt DateTime              @default(now())
-  requests  PurchaseRequestItem[]
-  stock     Stock?
-  entries   StockEntryItem[]
+  id                     Int                          @id @default(autoincrement())
+  name                   String
+  category               String
+  unit                   String
+  createdAt              DateTime                     @default(now())
+  requests               PurchaseRequestItem[]
+  stock                  Stock?
+  entries                StockEntryItem[]
+  templateItems          AssemblyMaterialTemplateItem[]
+  assemblyMaterialItems  DharmaAssemblyMaterial[]
 }
 
 model Stock {
@@ -28,14 +30,16 @@ model Stock {
 }
 
 model PurchaseRequest {
-  id        Int                   @id @default(autoincrement())
-  title     String
-  applicant String
-  status    String                @default("pending")
-  remark    String                @default("")
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
-  items     PurchaseRequestItem[]
+  id         Int                   @id @default(autoincrement())
+  title      String
+  applicant  String
+  status     String                @default("pending")
+  remark     String                @default("")
+  assemblyId Int?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  items      PurchaseRequestItem[]
+  assembly   DharmaAssembly?       @relation(fields: [assemblyId], references: [id])
 }
 
 model PurchaseRequestItem {
@@ -67,19 +71,53 @@ model StockEntryItem {
 }
 
 model DharmaAssembly {
-  id                   Int             @id @default(autoincrement())
+  id                   Int                     @id @default(autoincrement())
   name                 String
   type                 String
   master               String
   startTime            DateTime
   endTime              DateTime
   hall                 String
-  capacity             Int             @default(0)
+  capacity             Int                     @default(0)
   registrationDeadline DateTime?
-  remark               String          @default("")
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
+  status               String                  @default("draft")
+  remark               String                  @default("")
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
   registrations        Registration[]
+  materials            DharmaAssemblyMaterial[]
+  purchaseRequests     PurchaseRequest[]
+}
+
+model AssemblyMaterialTemplate {
+  id        Int                             @id @default(autoincrement())
+  type      String
+  name      String
+  remark    String                          @default("")
+  createdAt DateTime                        @default(now())
+  items     AssemblyMaterialTemplateItem[]
+
+  @@unique([type])
+}
+
+model AssemblyMaterialTemplateItem {
+  id         Int                       @id @default(autoincrement())
+  templateId Int
+  materialId Int
+  quantity   Float
+  remark     String                    @default("")
+  template   AssemblyMaterialTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  material   Material                  @relation(fields: [materialId], references: [id])
+}
+
+model DharmaAssemblyMaterial {
+  id         Int             @id @default(autoincrement())
+  assemblyId Int
+  materialId Int
+  quantity   Float
+  remark     String          @default("")
+  assembly   DharmaAssembly  @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  material   Material        @relation(fields: [materialId], references: [id])
 }
 
 model Registration {

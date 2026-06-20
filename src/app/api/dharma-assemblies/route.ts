@@ -6,7 +6,12 @@ export async function GET() {
     orderBy: { startTime: "asc" },
     include: {
       _count: {
-        select: { registrations: true },
+        select: { registrations: true, purchaseRequests: true },
+      },
+      materials: {
+        include: {
+          material: true,
+        },
       },
     },
   });
@@ -77,6 +82,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const template = await prisma.assemblyMaterialTemplate.findUnique({
+    where: { type },
+    include: { items: true },
+  });
+
+  const materialData = template?.items.map((item) => ({
+    materialId: item.materialId,
+    quantity: item.quantity,
+    remark: item.remark,
+  })) || [];
+
   const created = await prisma.dharmaAssembly.create({
     data: {
       name,
@@ -88,10 +104,18 @@ export async function POST(request: Request) {
       capacity: capacity ? Number(capacity) : 0,
       registrationDeadline: deadline,
       remark: remark || "",
+      materials: {
+        create: materialData,
+      },
     },
     include: {
       _count: {
-        select: { registrations: true },
+        select: { registrations: true, purchaseRequests: true },
+      },
+      materials: {
+        include: {
+          material: true,
+        },
       },
     },
   });

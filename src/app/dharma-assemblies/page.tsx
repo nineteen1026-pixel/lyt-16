@@ -4,6 +4,20 @@ import { useEffect, useState } from "react";
 import { NavLayout } from "@/components/StatusBadge";
 import { DataTable, FormField, Input, Button, Modal, Select } from "@/components/ui";
 
+type AssemblyMaterial = {
+  id: number;
+  assemblyId: number;
+  materialId: number;
+  quantity: number;
+  remark: string;
+  material: {
+    id: number;
+    name: string;
+    category: string;
+    unit: string;
+  };
+};
+
 type DharmaAssembly = {
   id: number;
   name: string;
@@ -14,11 +28,14 @@ type DharmaAssembly = {
   hall: string;
   capacity: number;
   registrationDeadline: string | null;
+  status: string;
   remark: string;
   createdAt: string;
   _count: {
     registrations: number;
+    purchaseRequests: number;
   };
+  materials: AssemblyMaterial[];
 };
 
 type Registration = {
@@ -79,6 +96,14 @@ export default function DharmaAssembliesPage() {
   const [showRegistrations, setShowRegistrations] = useState(false);
   const [viewRegistrations, setViewRegistrations] = useState<Registration[]>([]);
   const [viewAssemblyName, setViewAssemblyName] = useState("");
+
+  const [showMaterials, setShowMaterials] = useState(false);
+  const [viewMaterials, setViewMaterials] = useState<AssemblyMaterial[]>([]);
+  const [viewMaterialsAssemblyName, setViewMaterialsAssemblyName] = useState("");
+
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAssembly, setConfirmAssembly] = useState<DharmaAssembly | null>(null);
+  const [applicant, setApplicant] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -193,6 +218,58 @@ export default function DharmaAssembliesPage() {
     return { text: "报名中", color: "text-green-600 bg-green-50", canRegister: true };
   };
 
+  const getAssemblyStatus = (status: string) => {
+    switch (status) {
+      case "draft":
+        return { text: "待确认", color: "text-amber-600 bg-amber-50", canConfirm: true };
+      case "confirmed":
+        return { text: "已确认", color: "text-green-600 bg-green-50", canConfirm: false };
+      case "completed":
+        return { text: "已完成", color: "text-gray-600 bg-gray-100", canConfirm: false };
+      case "cancelled":
+        return { text: "已取消", color: "text-red-600 bg-red-50", canConfirm: false };
+      default:
+        return { text: "未知", color: "text-gray-500 bg-gray-100", canConfirm: false };
+    }
+  };
+
+  const openMaterialsModal = (assembly: DharmaAssembly) => {
+    setViewMaterialsAssemblyName(assembly.name);
+    setViewMaterials(assembly.materials);
+    setShowMaterials(true);
+  };
+
+  const openConfirmModal = (assembly: DharmaAssembly) => {
+    setConfirmAssembly(assembly);
+    setApplicant("");
+    setShowConfirm(true);
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmAssembly) return;
+    try {
+      const res = await fetch(`/api/dharma-assemblies/${confirmAssembly.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "confirm", applicant: applicant || "系统自动" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setToast(data.error || "确认失败");
+        return;
+      }
+      const data = await res.json();
+      setShowConfirm(false);
+      setConfirmAssembly(null);
+      load();
+      setToast(`排期确认成功！已自动生成采购申请（编号：${data.purchaseRequest.id}）`);
+      setTimeout(() => setToast(""), 5000);
+    } catch {
+      setToast("确认失败，请重试");
+      setTimeout(() => setToast(""), 3000);
+    }
+  };
+
   const handleCreate = async () => {
     setErrorMsg("");
     if (!form.name || !form.master || !form.startTime || !form.endTime) {
@@ -296,7 +373,10 @@ export default function DharmaAssembliesPage() {
       prev
         ? {
             ...prev,
-            _count: { registrations: result.currentCount },
+            _count: {
+              registrations: result.currentCount,
+              purchaseRequests: prev._count.purchaseRequests,
+            },
           }
         : prev
     );
@@ -306,7 +386,13 @@ export default function DharmaAssembliesPage() {
     setAssemblies((prev) =>
       prev.map((a) =>
         a.id === currentAssembly.id
-          ? { ...a, _count: { registrations: result.currentCount } }
+          ? {
+              ...a,
+              _count: {
+                registrations: result.currentCount,
+                purchaseRequests: a._count.purchaseRequests,
+              },
+            }
           : a
       )
     );
@@ -364,6 +450,38 @@ export default function DharmaAssembliesPage() {
     },
     { key: "hall", label: "举办殿堂" },
     {
+      key: "status",
+      label: "排期状态",
+      render: (row: Record<string, unknown>) => {
+        const a = row as unknown as DharmaAssembly;
+        const status = getAssemblyStatus(a.status);
+        return (
+          <span className={`text-xs px-2 py-0.5 rounded ${status.color}`}>
+            {status.text}
+          </span>
+        );
+      },
+    },
+    {
+      key: "materials",
+      label: "物资需求",
+      render: (row: Record<string, unknown>) => {
+        const a = row as unknown as DharmaAssembly;
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="text-xs text-gray-600">
+              共 <span className="font-medium text-amber-800">{a.materials.length}</span> 项
+            </div>
+            {a._count.purchaseRequests > 0 && (
+              <div className="text-xs text-green-600">
+                已生成采购申请 {a._count.purchaseRequests} 份
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       key: "registration",
       label: "报名情况",
       render: (row: Record<string, unknown>) => {
@@ -405,17 +523,18 @@ export default function DharmaAssembliesPage() {
       label: "操作",
       render: (row: Record<string, unknown>) => {
         const a = row as unknown as DharmaAssembly;
-        const status = getRegistrationStatus(a);
+        const regStatus = getRegistrationStatus(a);
+        const asmStatus = getAssemblyStatus(a.status);
         return (
           <div className="flex flex-col gap-1.5">
             <div className="flex gap-1">
               <Button
                 variant="primary"
                 onClick={() => openRegisterModal(a)}
-                disabled={!status.canRegister}
+                disabled={!regStatus.canRegister}
                 className="text-xs px-2 py-0.5"
               >
-                {status.canRegister ? "信众报名" : "查看名单"}
+                {regStatus.canRegister ? "信众报名" : "查看名单"}
               </Button>
               <Button
                 variant="secondary"
@@ -423,6 +542,23 @@ export default function DharmaAssembliesPage() {
                 className="text-xs px-2 py-0.5"
               >
                 名单
+              </Button>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                variant="primary"
+                onClick={() => openMaterialsModal(a)}
+                className="text-xs px-2 py-0.5"
+              >
+                物资
+              </Button>
+              <Button
+                variant="success"
+                onClick={() => openConfirmModal(a)}
+                disabled={!asmStatus.canConfirm}
+                className="text-xs px-2 py-0.5"
+              >
+                确认排期
               </Button>
             </div>
             <Button
@@ -829,6 +965,121 @@ export default function DharmaAssembliesPage() {
           <div className="flex justify-end pt-2 border-t">
             <Button onClick={() => setShowRegistrations(false)}>关闭</Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showMaterials}
+        onClose={() => setShowMaterials(false)}
+        title={`${viewMaterialsAssemblyName} - 物资需求清单`}
+      >
+        <div className="flex flex-col gap-4">
+          {viewMaterials.length > 0 ? (
+            <>
+              <div className="text-sm text-gray-500">
+                共 <span className="font-medium text-amber-800">{viewMaterials.length}</span> 项物资需求
+              </div>
+              <div className="max-h-96 overflow-y-auto border rounded">
+                <DataTable
+                  columns={[
+                    { key: "name", label: "物资名称" },
+                    { key: "category", label: "分类" },
+                    { key: "quantity", label: "需求数量" },
+                    { key: "unit", label: "单位" },
+                    { key: "remark", label: "备注" },
+                  ]}
+                  data={viewMaterials.map((m) => ({
+                    name: m.material.name,
+                    category: m.material.category,
+                    quantity: m.quantity,
+                    unit: m.material.unit,
+                    remark: m.remark || "-",
+                  }))}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="text-center text-gray-400 py-8">暂无物资需求</div>
+          )}
+          <div className="flex justify-end pt-2 border-t">
+            <Button onClick={() => setShowMaterials(false)}>关闭</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showConfirm}
+        onClose={() => {
+          setShowConfirm(false);
+          setConfirmAssembly(null);
+        }}
+        title="确认法会排期"
+      >
+        <div className="flex flex-col gap-4">
+          {confirmAssembly && (
+            <>
+              <div className="bg-amber-50 border border-amber-200 rounded p-3">
+                <div className="text-sm space-y-1">
+                  <div>
+                    <span className="text-gray-500">法会名称：</span>
+                    <span className="font-medium text-amber-900">{confirmAssembly.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">法会类型：</span>
+                    <span className="font-medium text-amber-900">{confirmAssembly.type}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">主法法师：</span>
+                    <span className="font-medium text-amber-900">{confirmAssembly.master}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">时间：</span>
+                    <span className="font-medium text-amber-900">
+                      {formatDateTimeRange(confirmAssembly.startTime, confirmAssembly.endTime)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">殿堂：</span>
+                    <span className="font-medium text-amber-900">{confirmAssembly.hall}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">物资需求：</span>
+                    <span className="font-medium text-amber-900">{confirmAssembly.materials.length} 项</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-sm text-amber-700 bg-amber-50/50 border border-amber-200 rounded px-3 py-2">
+                <div className="font-medium">确认后将：</div>
+                <div className="mt-1">• 法会状态更新为「已确认」</div>
+                <div>• 自动生成采购申请草稿（状态为草稿）</div>
+                <div>• 采购申请将包含所有关联的物资需求</div>
+              </div>
+
+              <FormField label="申请人（选填，默认为系统自动）">
+                <Input
+                  value={applicant}
+                  onChange={(e) => setApplicant(e.target.value)}
+                  placeholder="如：释明心"
+                />
+              </FormField>
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowConfirm(false);
+                    setConfirmAssembly(null);
+                  }}
+                >
+                  取消
+                </Button>
+                <Button variant="success" onClick={handleConfirm}>
+                  确认排期
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
     </NavLayout>

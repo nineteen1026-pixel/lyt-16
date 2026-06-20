@@ -2,13 +2,14 @@
 
 import { ReactNode } from "react";
 
-type StatusType = "pending" | "approved" | "rejected" | "completed";
+type StatusType = "pending" | "approved" | "rejected" | "completed" | "draft";
 
 const statusMap: Record<StatusType, { label: string; cls: string }> = {
   pending: { label: "待审批", cls: "bg-yellow-100 text-yellow-800" },
   approved: { label: "已审批", cls: "bg-blue-100 text-blue-800" },
   rejected: { label: "已驳回", cls: "bg-red-100 text-red-800" },
   completed: { label: "已完成", cls: "bg-green-100 text-green-800" },
+  draft: { label: "草稿", cls: "bg-gray-100 text-gray-600" },
 };
 
 export function StatusBadge({ status }: { status: string }) {
@@ -40,6 +41,12 @@ export function NavLayout({ children }: { children: ReactNode }) {
               className="hover:underline underline-offset-4"
             >
               法会排期
+            </a>
+            <a
+              href="/assembly-templates"
+              className="hover:underline underline-offset-4"
+            >
+              物资模板
             </a>
             <a
               href="/purchase-requests"
