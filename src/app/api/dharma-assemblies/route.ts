@@ -43,6 +43,7 @@ export async function POST(request: Request) {
           startTime: c.startTime,
           endTime: c.endTime,
           master: c.master,
+          hall: c.hall,
         })),
       },
       { status: 409 }

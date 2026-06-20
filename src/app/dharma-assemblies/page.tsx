@@ -22,6 +22,7 @@ type Conflict = {
   startTime: string;
   endTime: string;
   master: string;
+  hall: string;
 };
 
 const HALL_OPTIONS = [
@@ -53,6 +54,7 @@ export default function DharmaAssembliesPage() {
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [showConflict, setShowConflict] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [toast, setToast] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -65,8 +67,14 @@ export default function DharmaAssembliesPage() {
   });
 
   const load = async () => {
-    const res = await fetch("/api/dharma-assemblies");
-    setAssemblies(await res.json());
+    try {
+      const res = await fetch("/api/dharma-assemblies");
+      if (!res.ok) throw new Error();
+      setAssemblies(await res.json());
+    } catch {
+      setToast("加载列表失败，请刷新重试");
+      setTimeout(() => setToast(""), 3000);
+    }
   };
 
   useEffect(() => {
@@ -141,8 +149,14 @@ export default function DharmaAssembliesPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("确定删除此法会排期？")) return;
-    await fetch(`/api/dharma-assemblies/${id}`, { method: "DELETE" });
-    load();
+    try {
+      const res = await fetch(`/api/dharma-assemblies/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      load();
+    } catch {
+      setToast("删除失败，请重试");
+      setTimeout(() => setToast(""), 3000);
+    }
   };
 
   const columns = [
@@ -189,6 +203,11 @@ export default function DharmaAssembliesPage() {
 
   return (
     <NavLayout>
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white text-sm px-5 py-2.5 rounded-lg shadow-lg animate-pulse">
+          {toast}
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-amber-900">法会排期</h2>
         <div className="flex items-center gap-3">
@@ -339,6 +358,7 @@ export default function DharmaAssembliesPage() {
                   <span className="font-medium text-amber-900">{c.name}</span>
                 </div>
                 <div className="text-sm text-gray-600 space-y-1">
+                  <div>举办殿堂：{c.hall}</div>
                   <div>主法法师：{c.master}</div>
                   <div>占用时段：{formatDateTimeRange(c.startTime, c.endTime)}</div>
                 </div>
