@@ -65,3 +65,16 @@ model StockEntryItem {
   material   Material   @relation(fields: [materialId], references: [id])
   entry      StockEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
 }
+
+model DharmaAssembly {
+  id         Int      @id @default(autoincrement())
+  name       String
+  type       String
+  master     String
+  startTime  DateTime
+  endTime    DateTime
+  hall       String
+  remark     String   @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

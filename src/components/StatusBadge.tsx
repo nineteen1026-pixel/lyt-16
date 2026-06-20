@@ -30,10 +30,16 @@ export function NavLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col">
       <header className="bg-amber-800 text-white shadow">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-6">
-          <h1 className="text-xl font-bold tracking-wide">寺院物资管理</h1>
+          <h1 className="text-xl font-bold tracking-wide">寺院管理系统</h1>
           <nav className="flex gap-4 text-sm">
             <a href="/" className="hover:underline underline-offset-4">
               首页
+            </a>
+            <a
+              href="/dharma-assemblies"
+              className="hover:underline underline-offset-4"
+            >
+              法会排期
             </a>
             <a
               href="/purchase-requests"
