@@ -4,6 +4,4 @@ import { resolve } from 'node:path'
 
 config({ path: resolve(process.cwd(), '.env') })
 
-export default defineConfig({
-  seed: 'npx tsx prisma/seed.ts',
-})
+export default defineConfig({})

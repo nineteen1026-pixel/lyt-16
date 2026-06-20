@@ -67,14 +67,28 @@ model StockEntryItem {
 }
 
 model DharmaAssembly {
-  id         Int      @id @default(autoincrement())
+  id                   Int             @id @default(autoincrement())
+  name                 String
+  type                 String
+  master               String
+  startTime            DateTime
+  endTime              DateTime
+  hall                 String
+  capacity             Int             @default(0)
+  registrationDeadline DateTime?
+  remark               String          @default("")
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  registrations        Registration[]
+}
+
+model Registration {
+  id         Int            @id @default(autoincrement())
+  assemblyId Int
   name       String
-  type       String
-  master     String
-  startTime  DateTime
-  endTime    DateTime
-  hall       String
-  remark     String   @default("")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  phone      String
+  createdAt  DateTime       @default(now())
+  assembly   DharmaAssembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+
+  @@unique([assemblyId, phone])
 }
