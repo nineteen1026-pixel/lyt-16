@@ -1,5 +1,8 @@
 import { defineConfig } from 'prisma/config'
-import 'dotenv/config'
+import { config } from 'dotenv'
+import { resolve } from 'node:path'
+
+config({ path: resolve(process.cwd(), '.env') })
 
 export default defineConfig({
   seed: 'npx tsx prisma/seed.ts',

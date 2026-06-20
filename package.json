@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate",
-    "db:migrate": "cross-env DATABASE_URL=\"file:./dev.db\" prisma migrate dev --name init",
-    "db:seed": "cross-env DATABASE_URL=\"file:./dev.db\" npx tsx prisma/seed.ts",
-    "db:setup": "cross-env DATABASE_URL=\"file:./dev.db\" prisma migrate dev --name init && cross-env DATABASE_URL=\"file:./dev.db\" npx tsx prisma/seed.ts"
+    "postinstall": "node -e \"require('fs').existsSync('.env') || require('fs').copyFileSync('.env.example','.env')\" && prisma generate || true",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev --name init",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "db:setup": "prisma migrate dev --name init && npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6",
