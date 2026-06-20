@@ -107,6 +107,47 @@ export default function DharmaAssembliesPage() {
     queueMicrotask(load);
   }, []);
 
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (intervalId) return;
+      intervalId = setInterval(() => {
+        fetch("/api/dharma-assemblies")
+          .then((res) => {
+            if (!res.ok) throw new Error();
+            return res.json();
+          })
+          .then((data) => setAssemblies(data))
+          .catch(() => {});
+      }, 5000);
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        load();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
+
   const halls = ["all", ...HALL_OPTIONS.map((h) => h.value)];
 
   const filtered =
@@ -249,16 +290,31 @@ export default function DharmaAssembliesPage() {
       setRegisterError(data.error || "报名失败");
       return;
     }
+    const result = await res.json();
+
+    setCurrentAssembly((prev) =>
+      prev
+        ? {
+            ...prev,
+            _count: { registrations: result.currentCount },
+          }
+        : prev
+    );
+
+    setRegistrations((prev) => [...prev, result.registration]);
+
+    setAssemblies((prev) =>
+      prev.map((a) =>
+        a.id === currentAssembly.id
+          ? { ...a, _count: { registrations: result.currentCount } }
+          : a
+      )
+    );
+
     setRegisterName("");
     setRegisterPhone("");
     setToast("报名成功");
     setTimeout(() => setToast(""), 3000);
-    load();
-    const listRes = await fetch(`/api/dharma-assemblies/${currentAssembly.id}/registrations`);
-    if (listRes.ok) {
-      const data = await listRes.json();
-      setRegistrations(data.registrations || []);
-    }
   };
 
   const handleDeleteRegistration = async (regId: number) => {
